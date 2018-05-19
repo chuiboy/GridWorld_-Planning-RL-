@@ -44,3 +44,37 @@ class Game:
     def reset(self):
         self.currentState = 0
         self.done = 0
+
+    def playGame(self, Q):
+
+        def displayGrid(state):
+            for i in range(15):
+                if i == state:
+                    if state in [4, 9, 14]:
+                        print('A')
+                    else:
+                        print('A', end='')
+                elif i in [3, 6, 13]:
+                    print('X', end='')
+                elif i == 14:
+                    print('G')
+                elif i in [4, 9]:
+                    print('O')
+                else:
+                    print('O', end='')
+
+        self.reset()
+        state = self.currentState
+        done = 0
+
+        print('A = agent, X = blocked, G = goal, O = open')
+        print('\ntimestep 0 (start):')
+        displayGrid(state)
+
+        t = 1
+        while done == 0:
+            print('\ntimestep {}:'.format(t))
+            action = np.argmax(Q[state])
+            state, _, done = self.step(action)
+            displayGrid(state)
+            t += 1
