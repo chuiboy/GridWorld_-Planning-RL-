@@ -1,111 +1,60 @@
-# Q-Learning
+# Q-learning
 
+# Import dependencies
 import numpy as np
-import random
 from game import Game
+import random
 
+# Create environment
 env = Game()
-print('state space:', env.stateSpace)
-print('action space:', env.actionSpace)
 
-######################
-##### Q-Learning #####
-######################
+# Primary parameters
+num_eps = 1000
+T = 1000 # horizon
+discount_rate = 0.99
+learning_rate = 0.1
 
-# Parameters
-num_eps = 100
-gamma = 0.9 # discount rate
-learning_rate = 0.5
-
-# Parameters for dynamic exploration rate
+# Parameters for epsilon-greedy policy improvement
 epsilon = 1.0 # exploration rate
-max_epsilon = 1.0
-min_epsilon = 0.01
-decay_rate = 0.03
+epsilon_decay_rate = 0.003
 
-# Initialize Q-table
-qtable = np.zeros((len(env.stateSpace), len(env.actionSpace)))
+# Initialize Q(s,a) for all s, a
+Q = np.zeros((len(env.stateSpace), len(env.actionSpace))) # action-value function for all (s,a) pairs
 
-# Run for many episodes
+# Run "num_eps" episodes
 for ep in range(num_eps):
 
+    # Reset the environment and initialize start state
     env.reset()
-    total_reward = 0
+    state = env.currentState
 
-    # Single episode (from start to goal)
-    while True:
+    # Sample episode
+    for t in range(T):
 
-        # Select action
+        # Select next action according to policy
         if random.uniform(0, 1) > epsilon:
-            action = np.argmax(qtable[env.currentState, :])
+            action = np.argmax(Q[env.currentState])
         else:
             action = random.choice(env.actionSpace)
 
-        # Perform action and update Q-table
-        state = env.currentState
-        new_state, reward, done = env.step(action)
-        qtable[state, action] = qtable[state, action] + learning_rate * (reward + gamma * np.max(qtable[new_state, :]) - qtable[state, action])
+        # Take a step in the environment
+        next_state, reward, done = env.step(action)
 
-        # Accumulated reward for episode
-        total_reward += reward
+        # Update action-value function for current (s,a) pairs
+        Q[state, action] += learning_rate * (reward + discount_rate * Q[next_state].max() - Q[state, action])
 
-        # Break out of episode once goal reached
-        if done == 1:
-            print('total reward for episode {}: {}'.format(ep, total_reward))
+        state = next_state
+
+        # End episode once terminal state reached
+        if done:
             break
 
-    # Update exploration rate for the next episode
-    epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate*ep)
+        # Update exploration rate
+        epsilon = np.exp(-epsilon_decay_rate * ep)
 
-# ​Final Q-table
-print(qtable)
+# Display the action-value function
+print('Action-Value function for all states and actions:')
+print(Q)
 
-
-##############################
-##### Agent under policy #####
-##############################
-
-# Function to display Grid World given agent's state
-def displayGrid(state):
-    print('A = agent, X = blocked, G = goal, O = open')
-    for i in range(15):
-        if i == state:
-            if state in [4, 9, 14]:
-                print('A')
-            else:
-                print('A', end='')
-        elif i == 0:
-            print('S', end='')
-        elif i in [3, 6, 13]:
-            print('X', end='')
-        elif i == 14:
-            print('G')
-        elif i in [4, 9]:
-            print('O')
-        else:
-            print('O', end='')
-
-# Run agent through Grid World using learnt policy
-env.reset()
-total_reward = 0
-displayGrid(env.currentState)
-
-while True:
-
-    # Select action
-    action = np.argmax(qtable[env.currentState, :])
-
-    # Perform action
-    state = env.currentState
-    new_state, reward, done = env.step(action)
-
-    # Display updated Grid World
-    displayGrid(new_state)
-
-    # Accumulated reward
-    total_reward += reward
-
-    # Break out of episode once goal reached
-    if done == 1:
-        print('total reward:', total_reward)
-        break
+# Run through the grid world following the learnt policy
+env.playGame(Q)
